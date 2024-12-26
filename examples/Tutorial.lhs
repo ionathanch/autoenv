@@ -82,7 +82,7 @@ Substitution(?)-based interpreter
 
 In this version, we create a type for binders, i.e. expressions with a 
 single free variable and a delayed substitution. For convenience, we represent
-the delayed substitution as a function from indices to expression. 
+the delayed substitution as a function from indices to expressions. 
 
 <         Fin m -> Exp n   -- indices bounded by m to expressions in scope n
 
@@ -151,11 +151,12 @@ Alpha-equivalence
 -----------------
 
 
-Because we have a way to apply a delayed substituion, we can 
+Because we have a way to apply a delayed substitution, we can 
 implement alpha-equivalence. To do so, we first implement 
 a function that forces the delayed substitution, called `unbind`
 which substitutes through the body of the binder. 
 
+> unbind :: (Subst v e, Subst v v) => Bind v e m -> e (S m)
 > unbind (Bind r a) = subst (up r) a
 
 However, there is a catch: we have to first modify the delayed 

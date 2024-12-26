@@ -19,7 +19,7 @@ module AutoEnv.Env(Env,
 
 import AutoEnv.Lib
 import AutoEnv.Classes
-import Prelude hiding (head,tail)   
+import Prelude hiding (head,tail)
 
 ----------------------------------------------
 -- operations on environments/substitutions

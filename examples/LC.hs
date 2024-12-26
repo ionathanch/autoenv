@@ -36,7 +36,7 @@ data Exp (n :: Nat) where
 -- | The identity function "λ x. x".
 -- With de Bruijn indices we write it as "λ. 0"
 -- The `bind` function creates the binder
--- t0 :: Exp Z
+t0 :: Exp Z
 t0 = Lam (bind (Var f0))
 
 -- | A larger term "λ x. λy. x ((λ z. z) y)"
@@ -98,7 +98,7 @@ instance SubstVar Exp where
 -- (explicit substitution) to an expression.
 --
 -- The implementation of this operation applies the environment to
--- variable index in the variable case. All other caseas follow
+-- variable index in the variable case. All other cases follow
 -- via recursion. The library includes a type class instance for
 -- the Bind type which handles the variable lifting needed under
 -- the binder.
@@ -226,7 +226,7 @@ nf (App e1 e2) =
 -- of the lambda paired with its environment. That is exactly
 -- what the implementation of bind does.
 
--- In the case of beta-reduction, the `unBindWith` operation
+-- In the case of beta-reduction, the `instantiateWith` operation
 -- applies its argument to the environment and subterm in the
 -- closure. In other words, this function calls `evalEnv`
 -- recursively with the saved environment and body of the lambda term.
@@ -238,10 +238,9 @@ evalEnv r (Var x) = applyEnv r x
 evalEnv r (Lam b) = applyE r (Lam b)
 evalEnv r (App e1 e2) =
   let v = evalEnv r e2
-   in case evalEnv r e1 of
-        Lam b ->
-          unbindWith b (\r' e' -> evalEnv (v .: r') e')
-        t -> App t v
+  in case evalEnv r e1 of
+    Lam b -> instantiateWith b v evalEnv
+    t -> App t v
 
 -- >>> evalEnv zeroE t1     -- start with "empty environment"
 -- λ. λ. 1 (λ. 0 0)
@@ -253,10 +252,6 @@ evalEnv r (App e1 e2) =
 
 -- >>> :t applyUnder nfEnv
 -- applyUnder nfEnv :: Env Exp n1 n2 -> Bind Exp Exp n1 -> Bind Exp Exp n2
---
--- In the beta-reduction case, we could use `unbindWith` as above
--- but the `instantiateWith` function already captures exactly
--- this pattern.
 nfEnv :: Env Exp m n -> Exp m -> Exp n
 nfEnv r (Var x) = applyEnv r x
 nfEnv r (Lam b) = Lam (applyUnder nfEnv r b)

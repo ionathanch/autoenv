@@ -36,6 +36,7 @@ data Exp (n :: Nat) where
     Tele n ->
     Exp n
 
+-- | A telescope of nested let bindings
 data Tele n where
   Body :: Exp n -> Tele n
   LetStar :: Exp n -> Bind Exp Tele n -> Tele n
@@ -79,6 +80,7 @@ t2 = Let t0 (bind (App (Var f0) (Var f0)))
 -- (let (λ. 0) in (0 0))
 
 -- let rec fix = \f. f (fix f) in f
+t3 :: Exp Z
 t3 = LetRec (bind (Lam (bind (App (Var f0) (App (Var f1) (Var f0)))))) (bind (Var f0))
 
 -- >>> t3
@@ -249,23 +251,22 @@ evalEnv r (Var x) = applyEnv r x
 evalEnv r (Lam b) = applyE r (Lam b)
 evalEnv r (App e1 e2) =
   let v = evalEnv r e2
-   in case evalEnv r e1 of
-        Lam b ->
-          unbindWith b (\r' e' -> evalEnv (v .: r') e')
-        t -> App t v
+  in case evalEnv r e1 of
+    Lam b -> instantiateWith b v evalEnv
+    t -> App t v
 evalEnv r (Let e1 e2) =
   let v = evalEnv r e1
-   in unbindWith e2 (\r' e' -> evalEnv (v .: (r' .>> r)) e')
+  in instantiateWithEnv e2 r v evalEnv
 evalEnv r (LetRec e1 e2) =
-  let v = unbindWith e1 (\r' e' -> evalEnv (v .: (r' .>> r)) e')
-   in unbindWith e2 (\r' e' -> evalEnv (v .: (r' .>> r)) e')
+  let v = instantiateWithEnv e1 r v evalEnv
+  in instantiateWithEnv e2 r v evalEnv
 evalEnv r (LetTele e) = evalTeleEnv r e
 
 evalTeleEnv :: Env Exp m n -> Tele m -> Exp n
 evalTeleEnv r (Body e) = evalEnv r e
 evalTeleEnv r (LetStar e1 e2) =
   let v = evalEnv r e1
-   in unbindWith e2 (\r' e' -> evalTeleEnv (v .: (r' .>> r)) e')
+  in instantiateWithEnv e2 r v evalTeleEnv
 
 -- >>> evalEnv zeroE t1     -- start with "empty environment"
 -- λ. λ. 1 (λ. 0 0)

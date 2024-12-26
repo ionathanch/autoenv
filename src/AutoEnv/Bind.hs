@@ -29,6 +29,17 @@ instance (Subst v v, Subst v c, FV c) => FV (Bind v c) where
 bind :: (Subst v c) => c (S n) -> Bind v c n
 bind = Bind idE
 
+-- | access the body of the binder  (inverse of bind)
+unbind :: forall v c n. (Subst v v, Subst v c) => Bind v c n -> c (S n)
+unbind (Bind r t) = applyE (up r) t
+
+-- | unbind a binder and apply the function to the argument and subterm
+unbindWith ::
+  Bind v c n ->
+  (forall m. Env v m n -> c (S m) -> d) ->
+  d
+unbindWith (Bind r t) f = f r t
+
 -- | instantiate a binder with a term
 instantiate :: (Subst v c) => Bind v c n -> v n -> c n
 instantiate b v = unbindWith b (\r e -> applyE (v .: r) e)
@@ -40,19 +51,17 @@ instantiateWith ::
   v n ->
   (forall m n. Env v m n -> c m -> d n) ->
   d n
-instantiateWith (Bind r a) v f = f (v .: r) a
+instantiateWith b v f = unbindWith b (\r e -> f (v .: r) e)
 
--- | access the body of the binder  (inverse of bind)
-unbind :: forall v c n. (Subst v v, Subst v c) => Bind v c n -> c (S n)
-unbind (Bind r t) = applyE (up r) t
-
--- | unbind a binder and apply the function to the argument and subterm
-unbindWith ::
-  (SubstVar v) =>
-  Bind v c n ->
-  (forall m. Env v m n -> c (S m) -> d) ->
-  d
-unbindWith (Bind r t) f = f r t
+instantiateWithEnv ::
+  (Subst v v) =>
+  Bind v c m ->
+  Env v m n ->
+  v n ->
+  (forall m n. Env v m n -> c m -> d n) ->
+  d n
+instantiateWithEnv b r2 v f =
+  unbindWith b (\r1 e -> f (v .: (r1 .>> r2)) e)
 
 -- | apply an environment-parameterized function & environment
 -- underneath a binder
@@ -62,8 +71,8 @@ applyUnder ::
   Env v n1 n2 ->
   Bind v c n1 ->
   Bind v c n2
-applyUnder f r2 (Bind r1 t) =
-  bind (f (up (r1 .>> r2)) t)
+applyUnder f r2 b =
+  bind $ unbindWith b (\r1 t -> f (up (r1 .>> r2)) t)
 
 -- TODO: this implementation of strengthening for binders is rather inefficient
 -- maybe there is a better way to do it???

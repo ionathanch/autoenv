@@ -330,8 +330,7 @@ evalEnv r (Lam a b) = applyE r (Lam a b)
 evalEnv r (App e1 e2) =
   let v = evalEnv r e2
    in case evalEnv r e1 of
-        Lam a b ->
-          unbindWith b (\r' e' -> evalEnv (v .: r') e')
+        Lam a b -> instantiateWith b v evalEnv
         t -> App t v
 evalEnv r Star = Star
 evalEnv r (Pi a b) = applyE r (Pi a b)
@@ -339,12 +338,7 @@ evalEnv r (Sigma a b) = applyE r (Sigma a b)
 evalEnv r (Pair a b t) = applyE r (Pair a b t)
 evalEnv r (Split a b) =
   case evalEnv r a of
-    Pair a1 a2 _ ->
-      unbind2With
-        b
-        ( \r' e' ->
-            evalEnv (a1 .: (a2 .: (r' .>> r))) e'
-        )
+    Pair a1 a2 _ -> instantiate2WithEnv b r a1 a2 evalEnv
     t -> Split t (applyE r b)
 
 ----------------------------------------------------------------

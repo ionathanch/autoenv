@@ -66,3 +66,14 @@ instantiate2With ::
   c n
 instantiate2With b v1 v2 f =
   unbind2With b (\r e -> f (v1 .: (v2 .: r)) e)
+
+instantiate2WithEnv ::
+  (SubstVar v, Subst v v) =>
+  Bind2 v c m ->
+  Env v m n ->
+  v n ->
+  v n ->
+  (forall m n. Env v m n -> c m -> c n) ->
+  c n
+instantiate2WithEnv b r2 v1 v2 f =
+  unbind2With b (\r1 e -> f (v1 .: (v2 .: (r1 .>> r2))) e)
